@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 압축 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .result-box h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .result-box p {
+            margin: 5px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>데이터 압축 테스트</h1>
+        <div class="input-group">
+            <label for="dataSize">데이터 크기 (바이트):</label>
+            <input type="number" id="dataSize" min="1" value="1000">
+        </div>
+        <div class="input-group">
+            <label for="iterations">반복 횟수:</label>
+            <input type="number" id="iterations" min="1" value="5">
+        </div>
+        <button onclick="testCompression()">테스트 실행</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function calculateKolmogorovComplexity(data) {
+            const counts = {};
+            for (let i = 0; i < data.length; i++) {
+                const byte = data.charCodeAt(i);
+                counts[byte] = (counts[byte] || 0) + 1;
+            }
+            
+            let entropy = 0;
+            const total = data.length;
+            
+            for (const count of Object.values(counts)) {
+                const p = count / total;
+                entropy -= p * Math.log2(p);
+            }
+            
+            const maxEntropy = 8;
+            const complexity = entropy / maxEntropy;
+            
+            return complexity;
+        }
+
+        function formatComplexity(complexity) {
+            if (complexity < 0.2) return "매우 규칙적";
+            if (complexity < 0.4) return "규칙적";
+            if (complexity < 0.6) return "중간";
+            if (complexity < 0.8) return "무작위적";
+            return "매우 무작위적";
+        }
+
+        function createRepeatingData(size) {
+            return '01'.repeat(size / 2);
+        }
+
+        function createNaturalLanguageData(size) {
+            const text = "The quick brown fox jumps over the lazy dog. Python is an interpreted, high-level, general-purpose programming language.";
+            let result = '';
+            while (result.length < size) {
+                result += text;
+            }
+            return result.substring(0, size);
+        }
+
+        function createRandomData(size) {
+            let result = '';
+            for (let i = 0; i < size; i++) {
+                result += String.fromCharCode(Math.floor(Math.random() * 256));
+            }
+            return result;
+        }
+
+        function compressData(data) {
+            const encoder = new TextEncoder();
+            const compressed = encoder.encode(data).reduce((acc, byte) => {
+                return acc + String.fromCharCode(byte);
+            }, '');
+            return compressed;
+        }
+
+        function calculateCompressionRate(original, compressed) {
+            const originalSize = original.length;
+            const compressedSize = compressed.length;
+            return ((compressedSize / originalSize) * 100).toFixed(2);
+        }
+
+        function testCompression() {
+            const dataSize = parseInt(document.getElementById('dataSize').value);
+            const iterations = parseInt(document.getElementById('iterations').value);
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            // 각 데이터 유형 테스트
+            const dataTypes = [
+                { type: "규칙적인", creator: createRepeatingData },
+                { type: "자연어", creator: createNaturalLanguageData },
+                { type: "무작위", creator: createRandomData }
+            ];
+
+            dataTypes.forEach(dataType => {
+                const data = dataType.creator(dataSize);
+                const compressed = compressData(data);
+                const compressionRate = calculateCompressionRate(data, compressed);
+                const complexity = calculateKolmogorovComplexity(data);
+                const complexityDescription = formatComplexity(complexity);
+
+                const resultBox = document.createElement('div');
+                resultBox.className = 'result-box';
+                resultBox.innerHTML = `
+                    <h3>${dataType.type} 데이터</h3>
+                    <p>원본 크기: ${data.length} bytes</p>
+                    <p>압축된 크기: ${compressed.length} bytes</p>
+                    <p>압축률: ${compressionRate}%</p>
+                    <p>Kolmogorov 복잡도: ${complexity.toFixed(2)} (${complexityDescription})</p>
+                `;
+                resultsDiv.appendChild(resultBox);
+            });
+        }
+    </script>
+</body>
+</html>
